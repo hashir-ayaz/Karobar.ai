@@ -54,5 +54,3 @@ uvicorn api.main:app --reload
 - [ ] Add export-to-CSV option
 
 ---
-
-Let me know if you want this README personalized with your GitHub link or if you want a longer version with usage examples!
