@@ -3,9 +3,10 @@
 import os
 import pymongo
 from resume_parser import extract_text_from_pdf, analyze_resume, nlp
+from LLM import parse_resume_llm  # Assuming this is the correct import path
 
 # Configuration
-FOLDER_PATH = "../archive/data/data/ENGINEERING"  # Update to your resumes directory
+FOLDER_PATH = "../resumes"  # Update to your resumes directory
 MONGODB_URI = "mongodb+srv://hashirayaz:jY1p6KbvePHFfWLc@cluster0.nw4lxia.mongodb.net/"  # MongoDB connection URI
 DB_NAME = "ai-project"  # Database name
 COLLECTION_NAME = "resumes"  # Collection name
@@ -42,7 +43,8 @@ def process_resumes():
             text = extract_text_from_pdf(file_path)
 
             # Parse resume structure
-            resume_data = analyze_resume(text)
+            # resume_data = analyze_resume(text)
+            resume_data = parse_resume_llm(text)
 
             # Generate embedding using spaCy
             embedding = embed_text(text)

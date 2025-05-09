@@ -1,25 +1,106 @@
-from flask import Flask
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import pymongo
+import numpy as np
+from resume_parser import nlp  # reusing the same loaded model
 
 app = Flask(__name__)
+# Enable CORS for all routes and origins
+CORS(app)
+
+# MongoDB configuration
+MONGODB_URI = "mongodb+srv://hashirayaz:jY1p6KbvePHFfWLc@cluster0.nw4lxia.mongodb.net/"
+DB_NAME = "ai-project"  # Database name
+COLLECTION_NAME = "resumes"
+
+# Connect to MongoDB
+client = pymongo.MongoClient(MONGODB_URI)
+db = client[DB_NAME]
+collection = db[COLLECTION_NAME]
 
 
-@app.route("/")
+def embed_query(text: str) -> np.ndarray:
+    """
+    Generate an embedding for the query using spaCy.
+    """
+    return nlp(text).vector
+
+
+def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
+    """
+    Compute cosine similarity between two vectors.
+    """
+    norm1 = np.linalg.norm(vec1)
+    norm2 = np.linalg.norm(vec2)
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+    return float(np.dot(vec1, vec2) / (norm1 * norm2))
+
+
+def get_skills_required_from_job_description(job_description):
+    """
+    Extract skills from the job description using spaCy.
+    """
+    doc = nlp(job_description)
+    skills = []
+    for token in doc:
+        if token.is_alpha and len(token.text) > 1 and not token.is_stop:
+            skills.append(token.text)
+    return list(set(skills))
+
+
+@app.route("/resume", methods=["GET"])
+def get_resume():
+    filename = request.args.get("filename")
+    if not filename:
+        return jsonify({"error": "Missing 'filename' parameter"}), 400
+
+    resume = collection.find_one({"filename": filename}, {"_id": 0})
+    if not resume:
+        return jsonify({"error": "Resume not found"}), 404
+
+    return jsonify(resume), 200
+
+
+@app.route("/api/match", methods=["GET"])
+def match_resumes():
+    query = request.args.get("query", "")
+    if not query:
+        return jsonify({"error": "Missing 'query' parameter"}), 400
+
+    # Extract skills from the job description
+    skills = get_skills_required_from_job_description(query)
+    if not skills:
+        return jsonify({"error": "No skills found in the job description"}), 400
+    # Generate embedding for the query
+
+    query_vec = embed_query(query)
+    results = []
+
+    for resume in collection.find(
+        {}, {"filename": 1, "parsed_data": 1, "embedding": 1}
+    ):
+        resume_vec = np.array(resume.get("embedding", []))
+        if resume_vec.size == 0:
+            continue
+        score = cosine_similarity(query_vec, resume_vec)
+        results.append(
+            {
+                "filename": resume["filename"],
+                "score": score,
+                "parsed_data": resume["parsed_data"],
+            }
+        )
+
+    top_matches = sorted(results, key=lambda x: x["score"], reverse=True)[:5]
+    return jsonify(top_matches), 200
+
+
+@app.route("/", methods=["GET"])
 def hello_world():
     return "Hello, World!"
 
 
-@app.route("/api/upload", methods=["POST"])
-def upload_file():
-    # Placeholder for file upload logic
-    return "File upload endpoint", 200
-
-
-# this gets the user's query and returns a list of matched top 10 resumes
-@app.route("/api/match", methods=["GET"])
-def match_resumes():
-    # Placeholder for resume matching logic
-    return "Resume matching endpoint", 200
-
-
 if __name__ == "__main__":
+    # Remember to pip install flask flask-cors pymongo spacy numpy
     app.run(debug=True)
