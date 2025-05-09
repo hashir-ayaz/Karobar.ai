@@ -3,6 +3,8 @@ from flask_cors import CORS
 import pymongo
 import numpy as np
 from resume_parser import nlp  # reusing the same loaded model
+import os
+from LLM import parse_user_query
 
 app = Flask(__name__)
 # Enable CORS for all routes and origins
@@ -67,10 +69,13 @@ def match_resumes():
     query = request.args.get("query", "")
     if not query:
         return jsonify({"error": "Missing 'query' parameter"}), 400
-
+    print("Query:", query)
     # Extract skills from the job description
-    skills = get_skills_required_from_job_description(query)
-    if not skills:
+    required_skills_json = parse_user_query(query)
+    print("Required Skills JSON:", required_skills_json)
+    required_skills = required_skills_json.get("skills", [])
+
+    if not required_skills:
         return jsonify({"error": "No skills found in the job description"}), 400
     # Generate embedding for the query
 
@@ -93,7 +98,10 @@ def match_resumes():
         )
 
     top_matches = sorted(results, key=lambda x: x["score"], reverse=True)[:5]
-    return jsonify(top_matches), 200
+    return (
+        jsonify({"top_matches": top_matches, "required_skills": required_skills}),
+        200,
+    )
 
 
 @app.route("/", methods=["GET"])

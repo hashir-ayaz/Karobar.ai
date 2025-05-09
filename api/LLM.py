@@ -1,5 +1,20 @@
 from groq import Groq
 import os
+import json
+
+
+def get_user_query_prompt():
+    # this prompt will be used when the user submits a query
+    """
+    Returns a prompt for user query parsing.
+    """
+    return (
+        "You are a resume parser. Your task is to extract relevant information "
+        "from user queries. The output should be a JSON object containing the "
+        "following fields: skills. Ensure that each "
+        "field contains the most accurate and complete information based on the user query."
+        "Example: required_skills = ['Python', 'Flask', 'AWS', 'MongoDB']"
+    )
 
 
 def get_resume_parsing_prompt():
@@ -55,24 +70,37 @@ def parse_resume_llm(text):
             temperature=0.0,
         )
         parsed_data = response.choices[0].message.content
-        return parsed_data
+        return json.loads(parsed_data)
     except Exception as e:
         print(f"Error parsing resume: {e}")
         return None
 
 
-resume_text = """Email: emily.johnson@example.com
-LinkedIn: linkedin.com/in/emilyjohnson
-Skills
-- Python
-- Flask
-- AWS
-- MongoDB
-Education
-M.Sc. in Software Engineering, University B (2018-2022)
-Projects
-- Mobile App: Built a cross-platform app using React Native.
-- Web Portal: Designed and implemented a user management portal.
-Experience
-- Backend Developer at Startup Z (2020-Present): Implemented microservices with Docker and Kubernetes."""
-print(parse_resume_llm(resume_text))
+def parse_user_query(text):
+    """
+    Parses the user query using a language model and returns structured data.
+    """
+    try:
+        print(f"Parsing user query: {text}")
+        prompt = get_user_query_prompt()
+        response = client.chat.completions.create(
+            messages=[
+                {"role": "user", "content": f"{prompt}\n\n{text}"},
+            ],
+            model="llama-3.3-70b-versatile",
+            response_format={"type": "json_object"},
+            temperature=0.0,
+        )
+        parsed_data = response.choices[0].message.content
+        print(f"Parsed data: {parsed_data}")
+        return json.loads(parsed_data)
+    except Exception as e:
+        print(f"Error parsing user query: {e}")
+        return None
+
+
+# user_query = (
+#     "I am looking for a software engineer with experience in Python, Flask, and AWS."
+# )
+# parsed_query = parse_user_query(user_query)
+# print(parsed_query)
