@@ -4,16 +4,25 @@ import json
 
 
 def get_user_query_prompt():
-    # this prompt will be used when the user submits a query
     """
-    Returns a prompt for user query parsing.
+    Returns a prompt for user query parsing that dynamically expands required skills
+    based on the user’s request. The prompt is designed to extract relevant skills
+    for different developer roles (e.g., JavaScript developers, backend developers).
     """
+
     return (
-        "You are a resume parser. Your task is to extract relevant information "
-        "from user queries. The output should be a JSON object containing the "
-        "following fields: skills. Ensure that each "
-        "field contains the most accurate and complete information based on the user query."
-        "Example: required_skills = ['Python', 'Flask', 'AWS', 'MongoDB']"
+        "You are a resume parser and job role expert. Your task is to extract relevant information "
+        "from user queries and generate a list of skills required for the role specified by the user. "
+        "Based on the job description, expand the required skills to match the relevant technologies. "
+        "For example, if the user asks for a 'JavaScript developer', you should include skills like "
+        "'Node.js', 'React', 'Express', 'React Native', 'Vue.js', 'MongoDB', 'NestJS', etc. "
+        "The output should be a JSON object containing the following fields: "
+        "'required_skills'. Ensure that each field contains a comprehensive and accurate list of skills "
+        "based on the job description or role mentioned in the user's query. "
+        "If the user asks for a 'backend developer', include skills like 'Node.js', 'Express', 'AWS', "
+        "'MongoDB', 'Docker', etc. "
+        "Here’s an example output for a 'Full Stack Developer' role: "
+        "required_skills = ['JavaScript', 'Node.js', 'React', 'MongoDB', 'Express', 'AWS', 'Docker']"
     )
 
 

@@ -51,17 +51,22 @@ def get_skills_required_from_job_description(job_description):
     return list(set(skills))
 
 
-@app.route("/resume", methods=["GET"])
-def get_resume():
-    filename = request.args.get("filename")
+from flask import send_from_directory
+
+
+@app.route("/api/resume/<filename>", methods=["GET"])
+def get_resume(filename):
+    resume_folder = "../resumes/allresumes"  # Path where your resumes are stored
+
+    # Ensure filename is valid (you can add any additional checks for security reasons)
     if not filename:
         return jsonify({"error": "Missing 'filename' parameter"}), 400
 
-    resume = collection.find_one({"filename": filename}, {"_id": 0})
-    if not resume:
+    # Serve the file from the directory
+    try:
+        return send_from_directory(resume_folder, filename, as_attachment=True)
+    except FileNotFoundError:
         return jsonify({"error": "Resume not found"}), 404
-
-    return jsonify(resume), 200
 
 
 @app.route("/api/match", methods=["GET"])
@@ -73,7 +78,7 @@ def match_resumes():
     # Extract skills from the job description
     required_skills_json = parse_user_query(query)
     print("Required Skills JSON:", required_skills_json)
-    required_skills = required_skills_json.get("skills", [])
+    required_skills = required_skills_json.get("required_skills", [])
 
     if not required_skills:
         return jsonify({"error": "No skills found in the job description"}), 400
@@ -97,7 +102,11 @@ def match_resumes():
             }
         )
 
-    top_matches = sorted(results, key=lambda x: x["score"], reverse=True)[:5]
+    NUMBER_OF_RESUMES = 10
+
+    top_matches = sorted(results, key=lambda x: x["score"], reverse=True)[
+        :NUMBER_OF_RESUMES
+    ]
     return (
         jsonify({"top_matches": top_matches, "required_skills": required_skills}),
         200,
